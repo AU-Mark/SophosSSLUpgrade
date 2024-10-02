@@ -1,8 +1,24 @@
 Try {
+    $CurrentUser = Get-WmiObject Win32_Process -Filter "Name='explorer.exe'" | ForEach-Object { $_.GetOwner() } | Select-Object -Unique -Expand User
+
     # Retrieve the current VPN profile
-    $OVPN = Get-ChildItem -Path "C:\Program Files (x86)\Sophos\Sophos SSL VPN Client\config" -Filter *.ovpn -File
-    # Set the temp VPN profile location we will be using
-    $TempOVPN = "C:\Temp\$($OVPN.Name)"
+    $OVPN = @(Get-ChildItem -Path "C:\Program Files (x86)\Sophos\Sophos SSL VPN Client\config" -Filter "$CurrentUser*.ovpn" -File)[0]
+
+    If (!$OVPN) {
+        Write-Host "No OVPN file could be located for $CurrentUser"
+        $OVPNFound = @(Get-ChildItem -Path "C:\Program Files (x86)\Sophos\Sophos SSL VPN Client\config" -Filter "*.ovpn" -File)[0]
+        If ($OVPNFound) {
+            $Response = Read-Host "A OVPN File was found with filename $($OVPNFound.Name). Would you like to use this OVPN file for $CurrentUser? (Y/N)"
+            If ($Response.ToUpper() -eq "Y") {
+                $OVPN = @(Get-ChildItem -Path "C:\Program Files (x86)\Sophos\Sophos SSL VPN Client\config" -Filter "*.ovpn" -File)[0]
+            }
+        }
+    }
+    
+    If ($OVPN) {
+        # Set the temp VPN profile location we will be using
+        $TempOVPN = "C:\Temp\$($OVPN.Name)"
+    }
 
     #Variable for if OVPN file was found
     $OVPNFound = $False
